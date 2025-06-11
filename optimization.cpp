@@ -10,255 +10,314 @@
 using namespace ClothOpt;
 
 int main() {
-    // Initialize Polyscope
+    // Initialize Polyscope with larger GUI
     polyscope::options::autocenterStructures = false;
     polyscope::options::autoscaleStructures = false;
+    polyscope::view::windowWidth = 1600;   // Wider window
+    polyscope::view::windowHeight = 1000;  // Taller window
     polyscope::init();
+    
+    // Scale up ImGui fonts for better readability
+    ImGuiIO& io = ImGui::GetIO();
+    io.FontGlobalScale = 3.0f;  // 30% larger text
     
     polyscope::view::setUpDir(polyscope::UpDir::YUp);
     polyscope::view::setFrontDir(polyscope::FrontDir::ZFront);
     
-    // Create 10x10 cloth
+    // Create 2x2 cloth
     ClothMesh cloth;
-    cloth.createGrid(10, 10, 0.1);  // 10x10 grid with 0.1 spacing
+    cloth.createGrid(2, 2, 0.2);
     
-    double clothWidth = 9 * 0.1;  // 9 intervals = 0.9 units
-    double clothCenter = clothWidth / 2.0;
+    // Position cloth slightly above the ground plane
+    double groundHeight = 0.0;
+    double clothStartHeight = 0.05;  // Start just above ground
     
-    // Start cloth flat at a reasonable height
     for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
         Eigen::Vector3d pos = cloth.getVertex(i).position;
-        pos.y() = 0.5;  // Start at height 0.5
+        pos.y() = clothStartHeight;  // Place cloth near ground
         cloth.setVertexPosition(i, pos);
     }
     
-    std::cout << "=== SIMPLE EDGE PULL DEMO ===" << std::endl;
-    std::cout << "Cloth: 10x10 grid, size: " << clothWidth << " x " << clothWidth << std::endl;
-    std::cout << "Pulling one edge (10 vertices) in the same direction" << std::endl;
+    // Print vertex layout
+    std::cout << "=== 2x2 CLOTH DEMO ===" << std::endl;
+    std::cout << "2 --- 3" << std::endl;
+    std::cout << "|     |" << std::endl;
+    std::cout << "0 --- 1" << std::endl;
     
-    // Cloth properties - flexible for nice deformation
-    cloth.properties.stiffness = 800.0;
-    cloth.properties.bendingStiffness = 20.0;
-    cloth.properties.damping = 0.9;
-    cloth.properties.friction = 0.8;
-    cloth.properties.gravity = Eigen::Vector3d(0, -9.81, 0);
+    // Print initial positions
+    for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+        Eigen::Vector3d pos = cloth.getVertex(i).position;
+        std::cout << "Vertex " << i << ": (" << pos.x() << ", " << pos.y() << ", " << pos.z() << ")" << std::endl;
+    }
     
-    // Create integrator
+    // Simple cloth properties
+    cloth.properties.stiffness = 500.0;
+    cloth.properties.damping = 0.8;
+    cloth.properties.gravity = Eigen::Vector3d(0, -9.81, 0);  // Standard gravity
+    
+    // Create integrator and controller
     auto integrator = std::make_unique<SemiImplicitEulerIntegrator>();
-    integrator->enableDebug(false);
-    
-    // Create controller
     ClothController controller;
-    controller.enableDebug(true);
     
-    // Get all vertices on one edge (bottom edge: j=9)
-    std::vector<size_t> edgeVertices;
-    for (int i = 0; i < 10; ++i) {
-        size_t vertexIndex = cloth.getGridIndex(i, 9);  // Bottom edge
-        edgeVertices.push_back(vertexIndex);
-    }
+    // Pin vertex 0 as anchor
+    cloth.pinVertex(0);
+    std::cout << "Pinned vertex 0 (anchor)" << std::endl;
+    std::cout << "Will control vertex 3 (top-right)" << std::endl;
     
-    std::cout << "Edge vertices to control: ";
-    for (size_t idx : edgeVertices) {
-        std::cout << idx << " ";
-    }
-    std::cout << std::endl;
+    // Create ground plane
+    std::vector<Eigen::Vector3d> groundVertices = {
+        {-0.5, groundHeight, -0.5},     // Bottom-left
+        {0.7, groundHeight, -0.5},      // Bottom-right  
+        {0.7, groundHeight, 0.7},       // Top-right
+        {-0.5, groundHeight, 0.7}       // Top-left
+    };
+    std::vector<std::array<int, 3>> groundTriangles = {
+        {0, 1, 2},  // First triangle
+        {0, 2, 3}   // Second triangle
+    };
     
     // Visualization
     auto* psMesh = polyscope::registerSurfaceMesh("Cloth", cloth.getVertexMatrix(), cloth.getTriangleMatrix());
-    psMesh->setSurfaceColor({0.3, 0.7, 0.9});  // Nice blue cloth
-    psMesh->setEdgeWidth(1.0);
+    psMesh->setSurfaceColor({0.2, 0.8, 0.4});  // Green cloth
+    psMesh->setEdgeWidth(3.0);
     psMesh->setMaterial("wax");
     
-    // Ground plane
-    std::vector<Eigen::Vector3d> groundVertices = {
-        {-0.2, 0.0, -0.2}, 
-        {clothWidth + 0.2, 0.0, -0.2}, 
-        {clothWidth + 0.2, 0.0, clothWidth + 0.2}, 
-        {-0.2, 0.0, clothWidth + 0.2}
-    };
-    std::vector<std::array<int, 3>> groundTriangles = {{0, 1, 2}, {0, 2, 3}};
+    // Register ground plane
     auto* psGround = polyscope::registerSurfaceMesh("Ground", groundVertices, groundTriangles);
-    psGround->setSurfaceColor({0.5, 0.5, 0.5});
+    psGround->setSurfaceColor({0.7, 0.7, 0.7});  // Gray ground
+    psGround->setMaterial("flat");
     
-    // Control points visualization - show the edge being controlled
-    std::vector<Eigen::Vector3d> controlPoints;
-    for (size_t idx : edgeVertices) {
-        controlPoints.push_back(cloth.getVertex(idx).position);
+    // Vertex visualization
+    std::vector<Eigen::Vector3d> vertexPositions;
+    for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+        vertexPositions.push_back(cloth.getVertex(i).position);
     }
-    auto* psControlPoints = polyscope::registerPointCloud("Control Edge", controlPoints);
-    psControlPoints->setPointRadius(0.015);
-    psControlPoints->setPointColor({1.0, 0.0, 0.0});  // Red for controlled edge
+    auto* psVertices = polyscope::registerPointCloud("Vertices", vertexPositions);
+    psVertices->setPointRadius(0.008);
+    psVertices->setPointColor({1.0, 0.0, 0.0});  // Red vertices
     
-    // Camera position
+    // Control point visualization - initialize with dummy point to avoid size mismatch
+    std::vector<Eigen::Vector3d> initialControlPoint = {Eigen::Vector3d(0, 0, 0)};
+    auto* psControlPoints = polyscope::registerPointCloud("Control Points", initialControlPoint);
+    psControlPoints->setPointRadius(0.01);
+    psControlPoints->setPointColor({1.0, 1.0, 0.0});  // Yellow for controlled
+    psControlPoints->setEnabled(false);  // Hide initially
+    
+    // Camera position - better view of cloth on ground
     polyscope::view::lookAt(
-        {clothCenter + 0.8, 0.8, clothCenter + 0.8},
-        {clothCenter, 0.3, clothCenter},
-        {0.0, 1.0, 0.0}
+        {0.5, 0.4, 0.5},    // Camera position
+        {0.1, 0.1, 0.1},    // Look at point (center of cloth)
+        {0.0, 1.0, 0.0}     // Up direction
     );
     
     // Simulation variables
-    double dt = 0.002;
-    int frameCount = 0;
-    double simulationTime = 0.0;
-    
-    // Control variables
-    bool applyControl = false;
-    float pullDistance = 0.3f;      // How far to pull
-    float pullHeight = 0.2f;        // How high to lift
-    float controlStrength = 1200.0f;
-    
-    // Pull direction options
-    enum PullDirection {
-        PULL_FORWARD,   // +Z direction
-        PULL_BACKWARD,  // -Z direction
-        PULL_RIGHT,     // +X direction
-        PULL_LEFT,      // -X direction
-        PULL_UP         // +Y direction
-    };
-    
-    PullDirection currentDirection = PULL_FORWARD;
-    const char* directionNames[] = {"Forward (+Z)", "Backward (-Z)", "Right (+X)", "Left (-X)", "Up (+Y)"};
+    double dt = 0.01;
+    bool controlActive = false;
+    float targetX = 0.2f, targetY = 0.3f, targetZ = 0.2f;  // Default target above ground
+    float strength = 800.0f;
+    int controlVertex = 3;  // Control vertex 3 instead of 0
     
     polyscope::state::userCallback = [&]() {
-        simulationTime += dt;
-        
-        // Apply control if enabled
-        if (applyControl) {
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.FontGlobalScale = 2.0f; 
+
+        // Apply control
+        if (controlActive) {
             controller.applyControls(cloth, dt);
         }
         
-        // Run physics simulation
-        for (int i = 0; i < 3; ++i) {
-            integrator->step(cloth, dt);
+        // Physics
+        integrator->step(cloth, dt);
+        
+        // Simple ground collision (prevent vertices from going below ground)
+        for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+            Eigen::Vector3d pos = cloth.getVertex(i).position;
+            if (pos.y() < groundHeight + 0.01) {  // Small offset to prevent penetration
+                pos.y() = groundHeight + 0.01;
+                cloth.setVertexPosition(i, pos);
+                // Damp velocity in Y direction
+                cloth.velocities[i].y() *= 0.3;
+            }
         }
         
         // Update visualization
         psMesh->updateVertexPositions(cloth.getVertexMatrix());
         
-        // Update control points visualization
-        std::vector<Eigen::Vector3d> updatedControlPoints;
-        for (size_t idx : edgeVertices) {
-            updatedControlPoints.push_back(cloth.getVertex(idx).position);
+        // Update vertex visualization
+        std::vector<Eigen::Vector3d> updatedPositions;
+        for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+            updatedPositions.push_back(cloth.getVertex(i).position);
         }
-        psControlPoints->updatePointPositions(updatedControlPoints);
+        psVertices->updatePointPositions(updatedPositions);
         
-        frameCount++;
+        // Update control points visualization - FIX: Always update with exactly 1 point
+        if (controlActive) {
+            std::vector<Eigen::Vector3d> controlPoints = {cloth.getVertex(controlVertex).position};
+            psControlPoints->updatePointPositions(controlPoints);
+            psControlPoints->setEnabled(true);
+        } else {
+            // Keep the same size but hide the point cloud
+            std::vector<Eigen::Vector3d> hiddenPoint = {Eigen::Vector3d(0, -10, 0)};  // Move far away
+            psControlPoints->updatePointPositions(hiddenPoint);
+            psControlPoints->setEnabled(false);
+        }
         
-        // GUI
-        if (ImGui::Begin("Edge Pull Demo")) {
-            ImGui::Text("Simulation Time: %.1f s", simulationTime);
-            ImGui::Text("Frame: %d", frameCount);
-            ImGui::Text("Controlled vertices: %zu", edgeVertices.size());
+        // Larger GUI window with better spacing
+        ImGui::SetNextWindowSize(ImVec2(450, 700), ImGuiCond_FirstUseEver);  // Set window size
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);     // Set position
+        
+        if (ImGui::Begin("2x2 Cloth Controller", nullptr, ImGuiWindowFlags_None)) {
+            
+            // Header section with bigger text
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 12));  // More spacing
+            
+            ImGui::Text("=== CLOTH LAYOUT ===");
+            ImGui::Text("2 --- 3");
+            ImGui::Text("|         |");
+            ImGui::Text("0 --- 1");
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Vertex 0 is pinned (anchor)");
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Cloth rests on gray ground plane");
             
             ImGui::Separator();
+            ImGui::Spacing();
             
-            // Direction selection
-            ImGui::Text("Pull Direction:");
-            if (ImGui::RadioButton("Forward (+Z)", currentDirection == PULL_FORWARD)) {
-                currentDirection = PULL_FORWARD;
-            }
+            // Vertex selection with bigger buttons
+            ImGui::Text("Control which vertex:");
+            ImGui::Spacing();
+            
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 8));  // Bigger buttons
+            if (ImGui::RadioButton("Vertex 1##v1", controlVertex == 1)) controlVertex = 1;
             ImGui::SameLine();
-            if (ImGui::RadioButton("Backward (-Z)", currentDirection == PULL_BACKWARD)) {
-                currentDirection = PULL_BACKWARD;
-            }
-            
-            if (ImGui::RadioButton("Right (+X)", currentDirection == PULL_RIGHT)) {
-                currentDirection = PULL_RIGHT;
-            }
+            if (ImGui::RadioButton("Vertex 2##v2", controlVertex == 2)) controlVertex = 2;
             ImGui::SameLine();
-            if (ImGui::RadioButton("Left (-X)", currentDirection == PULL_LEFT)) {
-                currentDirection = PULL_LEFT;
-            }
-            
-            if (ImGui::RadioButton("Up (+Y)", currentDirection == PULL_UP)) {
-                currentDirection = PULL_UP;
-            }
+            if (ImGui::RadioButton("Vertex 3##v3", controlVertex == 3)) controlVertex = 3;
+            ImGui::PopStyleVar();
             
             ImGui::Separator();
+            ImGui::Spacing();
             
-            // Control parameters
-            ImGui::SliderFloat("Pull Distance", &pullDistance, 0.1f, 0.8f);
-            ImGui::SliderFloat("Pull Height", &pullHeight, 0.0f, 0.5f);
-            ImGui::SliderFloat("Control Strength", &controlStrength, 500.0f, 3000.0f);
+            // Target position controls with more space
+            ImGui::Text("Target position for vertex %d:", controlVertex);
+            ImGui::Spacing();
+            
+            ImGui::PushItemWidth(250);  // Wider sliders
+            ImGui::SliderFloat("X Position", &targetX, -0.3f, 0.5f, "%.3f");
+            ImGui::SliderFloat("Y Position", &targetY, 0.02f, 0.8f, "%.3f");
+            ImGui::SliderFloat("Z Position", &targetZ, -0.3f, 0.5f, "%.3f");
+            ImGui::Spacing();
+            ImGui::SliderFloat("Control Strength", &strength, 200.0f, 2000.0f, "%.0f");
+            ImGui::PopItemWidth();
             
             ImGui::Separator();
+            ImGui::Spacing();
             
-            // Control buttons
-            if (ImGui::Button("Start Pulling")) {
-                applyControl = true;
+            // Control buttons - larger and more prominent
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20, 12));  // Bigger buttons
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.2f, 1.0f));  // Green start button
+            if (ImGui::Button("START CONTROL", ImVec2(150, 0))) {
+                controlActive = true;
                 controller.removeAllControls();
-                
-                // Calculate pull direction vector
-                Eigen::Vector3d pullDirection(0, 0, 0);
-                switch (currentDirection) {
-                    case PULL_FORWARD:  pullDirection = Eigen::Vector3d(0, 0, pullDistance); break;
-                    case PULL_BACKWARD: pullDirection = Eigen::Vector3d(0, 0, -pullDistance); break;
-                    case PULL_RIGHT:    pullDirection = Eigen::Vector3d(pullDistance, 0, 0); break;
-                    case PULL_LEFT:     pullDirection = Eigen::Vector3d(-pullDistance, 0, 0); break;
-                    case PULL_UP:       pullDirection = Eigen::Vector3d(0, pullDistance, 0); break;
-                }
-                
-                // Add control to all edge vertices
-                for (size_t idx : edgeVertices) {
-                    Eigen::Vector3d currentPos = cloth.getVertex(idx).position;
-                    Eigen::Vector3d targetPos = currentPos + pullDirection + Eigen::Vector3d(0, pullHeight, 0);
-                    
-                    controller.addPositionControl(idx, targetPos, controlStrength, 100.0);
-                }
-                
-                std::cout << "Started pulling edge in direction: " << directionNames[currentDirection] << std::endl;
-                std::cout << "Pull vector: " << pullDirection.transpose() << std::endl;
+                Eigen::Vector3d target(targetX, targetY, targetZ);
+                controller.addPositionControl(controlVertex, target, strength, 100.0);
+                std::cout << "Controlling vertex " << controlVertex << " to: " << target.transpose() << std::endl;
             }
+            ImGui::PopStyleColor();
             
             ImGui::SameLine();
-            if (ImGui::Button("Stop Pulling")) {
-                applyControl = false;
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));  // Red stop button
+            if (ImGui::Button("STOP", ImVec2(100, 0))) {
+                controlActive = false;
                 controller.removeAllControls();
-                std::cout << "Stopped pulling" << std::endl;
+                std::cout << "Stopped control" << std::endl;
             }
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
             
-            ImGui::Separator();
+            ImGui::Spacing();
             
-            if (ImGui::Button("Reset Cloth")) {
-                applyControl = false;
+            // Action buttons
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15, 8));
+            if (ImGui::Button("Reset Cloth", ImVec2(120, 0))) {
+                controlActive = false;
                 controller.removeAllControls();
-                
-                // Reset all vertices to original grid positions
                 for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
-                    int gridX = i % 10;
-                    int gridY = i / 10;
-                    Eigen::Vector3d pos(gridX * 0.1, 0.5, gridY * 0.1);
-                    cloth.setVertexPosition(i, pos);
+                    int x = i % 2, z = i / 2;
+                    cloth.setVertexPosition(i, Eigen::Vector3d(x * 0.2, clothStartHeight, z * 0.2));
                     cloth.velocities[i] = Eigen::Vector3d::Zero();
                 }
+                cloth.pinVertex(0);
+                std::cout << "Reset cloth" << std::endl;
+            }
+            
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.6f, 0.2f, 1.0f));  // Orange drop button
+            if (ImGui::Button("Drop Cloth", ImVec2(120, 0))) {
+                controlActive = false;
+                controller.removeAllControls();
+                for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+                    int x = i % 2, z = i / 2;
+                    cloth.setVertexPosition(i, Eigen::Vector3d(x * 0.2, 0.3, z * 0.2));
+                    cloth.velocities[i] = Eigen::Vector3d::Zero();
+                }
+                cloth.pinVertex(0);
+                std::cout << "Dropped cloth from height" << std::endl;
+            }
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar();
+            
+            ImGui::Separator();
+            ImGui::Spacing();
+            
+            // Status section
+            ImGui::Text("=== STATUS ===");
+            ImGui::TextColored(controlActive ? ImVec4(0.2f, 1.0f, 0.2f, 1.0f) : ImVec4(1.0f, 0.2f, 0.2f, 1.0f), 
+                              "Control: %s", controlActive ? "ACTIVE" : "STOPPED");
+            ImGui::Text("Selected vertex: %d", controlVertex);
+            ImGui::Text("Ground height: %.2f", groundHeight);
+            
+            ImGui::Separator();
+            ImGui::Spacing();
+            
+            // Vertex positions with better formatting
+            ImGui::Text("=== VERTEX POSITIONS ===");
+            for (size_t i = 0; i < cloth.getVertexCount(); ++i) {
+                Eigen::Vector3d pos = cloth.getVertex(i).position;
+                const char* status = (i == 0) ? " [PINNED]" : (i == controlVertex && controlActive) ? " [CONTROLLED]" : "";
                 
-                std::cout << "Reset cloth to original position" << std::endl;
+                ImVec4 color = (i == 0) ? ImVec4(1.0f, 0.6f, 0.6f, 1.0f) :  // Pink for pinned
+                              (i == controlVertex && controlActive) ? ImVec4(0.6f, 1.0f, 0.6f, 1.0f) :  // Green for controlled
+                              ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // White for others
+                
+                ImGui::TextColored(color, "V%zu: (%.3f, %.3f, %.3f)%s", i, pos.x(), pos.y(), pos.z(), status);
             }
             
             ImGui::Separator();
+            ImGui::Spacing();
             
-            // Debug info
-            ImGui::Text("Debug Info:");
-            ImGui::Text("Control active: %s", applyControl ? "YES" : "NO");
-            ImGui::Text("Active controls: %zu", controller.getControlCount());
-            
-            if (ImGui::CollapsingHeader("Edge Vertices Positions")) {
-                for (size_t i = 0; i < edgeVertices.size(); ++i) {
-                    size_t idx = edgeVertices[i];
-                    Eigen::Vector3d pos = cloth.getVertex(idx).position;
-                    ImGui::Text("Vertex %zu: (%.2f, %.2f, %.2f)", idx, pos.x(), pos.y(), pos.z());
+            // Physics settings with collapsible header
+            if (ImGui::CollapsingHeader("Physics Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::PushItemWidth(200);
+                static float stiffness = cloth.properties.stiffness;
+                if (ImGui::SliderFloat("Stiffness", &stiffness, 100.0f, 1500.0f, "%.0f")) {
+                    cloth.properties.stiffness = stiffness;
                 }
+                
+                static float damping = cloth.properties.damping;
+                if (ImGui::SliderFloat("Damping", &damping, 0.3f, 0.95f, "%.2f")) {
+                    cloth.properties.damping = damping;
+                }
+                ImGui::PopItemWidth();
             }
+            
+            ImGui::PopStyleVar();  // Pop ItemSpacing
         }
         ImGui::End();
     };
     
-    std::cout << "\nStarting edge pull demo..." << std::endl;
-    std::cout << "Use the GUI to control the bottom edge of the cloth!" << std::endl;
-    std::cout << "- Select pull direction" << std::endl;
-    std::cout << "- Adjust pull distance and height" << std::endl;
-    std::cout << "- Click 'Start Pulling' to apply control" << std::endl;
+    std::cout << "\nCloth placed on ground plane!" << std::endl;
+    std::cout << "Use GUI to control vertices and watch cloth interact with ground!" << std::endl;
+    std::cout << "Try the 'Drop Cloth' button to see gravity in action!" << std::endl;
     
     polyscope::show();
     return 0;
