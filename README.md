@@ -78,12 +78,11 @@ You should see these executables:
 
 **Edge Pulling Demo (`./bin/Optimization`)**
 ![Edge Pulling Demo](image/sim.png)
-*Interactive cloth control with edge manipulation and real-time parameter adjustment*
+*Cloth physics simulation with sphere collision detection and realistic draping*
 
 **Collision Simulation (`./bin/Simulation`)**
 ![Collision Simulation](image/control.png)
-*Cloth physics simulation with sphere collision detection and realistic draping*
-
+*Interactive cloth control with edge manipulation and real-time parameter adjustment*
 
 
 </div>
