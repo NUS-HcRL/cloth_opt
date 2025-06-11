@@ -72,11 +72,11 @@ You should see these executables:
 
 <div align="center">
 
-**Basic Visualization (`./bin/Visualization`)**
+**Edge Pulling Demo (`./bin/Optimization`)**
 ![Basic Visualization](image/visual.png)
 *Fundamental cloth waving animation with material properties showcase*
 
-**Edge Pulling Demo (`./bin/Optimization`)**
+**Basic Visualization (`./bin/Visualization`)**
 ![Edge Pulling Demo](image/sim.png)
 *Cloth physics simulation with sphere collision detection and realistic draping*
 
