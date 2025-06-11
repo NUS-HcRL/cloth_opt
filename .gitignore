@@ -1,0 +1,203 @@
+# Build directories
+build/
+build-*/
+bin/
+lib/
+out/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+Visualization
+Simulation
+Optimization
+SimpleDemo
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDE and Editor files
+.vscode/
+.vs/
+*.vcxproj*
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# CLion
+.idea/
+cmake-build-*/
+
+# Code::Blocks
+*.cbp
+*.layout
+*.depend
+
+# Conan
+conanfile.txt
+conaninfo.txt
+conanbuildinfo.cmake
+
+# vcpkg
+vcpkg_installed/
+
+# Package managers
+_deps/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Profiling data
+*.prof
+*.perf
+callgrind.out.*
+massif.out.*
+
+# Documentation build
+docs/build/
+docs/_build/
+
+# Python (if using any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Research and data files
+*.dat
+*.data
+experiments/
+results/
+benchmarks/
+*.csv
+*.json
+*.xml
+
+# Video and image outputs (if capturing simulation results)
+*.mp4
+*.avi
+*.mov
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# Large mesh files (optional - uncomment if you have large assets)
+# *.obj
+# *.ply
+# *.stl
+# assets/large/
+
+# Configuration files (keep templates)
+config.ini
+settings.json
+*.config
+!config.template.*
+!settings.template.*
+
+# Performance and profiling outputs
+perf.data*
+*.gcov
+*.gcda
+*.gcno
+
+# Sanitizer outputs
+*.san
+
+# Core dumps
+core
+core.*
+
+# Generated documentation
+Doxygen/
+doxygen_warnings.txt
+
+# External dependencies (if included as submodules)
+third_party/
+external/
+libs/
+!third_party/.gitkeep
+!external/.gitkeep
+
+# Build artifacts
+install_manifest.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+
+# Test outputs
+test_results/
+test_output/
+Testing/
+
+# Packaging
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# License and readme backups
+README.md.bak
+LICENSE.bak
