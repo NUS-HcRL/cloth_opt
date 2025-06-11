@@ -135,15 +135,6 @@ benchmarks/
 *.json
 *.xml
 
-# Video and image outputs (if capturing simulation results)
-*.mp4
-*.avi
-*.mov
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.bmp
 
 # Large mesh files (optional - uncomment if you have large assets)
 # *.obj
