@@ -68,6 +68,26 @@ You should see these executables:
 ./bin/Visualization
 ```
 
+#### Demo Screenshots
+
+<div align="center">
+
+**Basic Visualization (`./bin/Visualization`)**
+![Basic Visualization](image/visual.png)
+*Fundamental cloth waving animation with material properties showcase*
+
+**Edge Pulling Demo (`./bin/Optimization`)**
+![Edge Pulling Demo](image/sim.png)
+*Interactive cloth control with edge manipulation and real-time parameter adjustment*
+
+**Collision Simulation (`./bin/Simulation`)**
+![Collision Simulation](image/control.png)
+*Cloth physics simulation with sphere collision detection and realistic draping*
+
+
+
+</div>
+
 ## Project Structure
 
 ```
@@ -107,7 +127,7 @@ The main demo (`./bin/Optimization`) showcases:
 
 ### Advanced Control Features
 
-The control system (`control.h/cpp`) provides:
+The control system (`controller.h/cpp`) provides:
 
 ```cpp
 // Position control - move vertices to target positions
