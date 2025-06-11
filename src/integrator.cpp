@@ -2,7 +2,7 @@
 #include <iostream>
 #include <iomanip>
 
-// Include parallel processing headers
+// Include parallel processing headers (not used)
 #ifdef HAVE_TBB
     #include <tbb/parallel_for.h>
     #include <tbb/blocked_range.h>
