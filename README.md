@@ -72,15 +72,15 @@ You should see these executables:
 
 <div align="center">
 
-**Edge Pulling Demo (`./bin/Optimization`)**
+**Basic Visualization (`./bin/Visualization`)**
 ![Basic Visualization](image/visual.png)
 *Fundamental cloth waving animation with material properties showcase*
 
-**Basic Visualization (`./bin/Visualization`)**
+**Collision Simulation (`./bin/Simulation`)**
 ![Edge Pulling Demo](image/sim.png)
 *Cloth physics simulation with sphere collision detection and realistic draping*
 
-**Collision Simulation (`./bin/Simulation`)**
+**Edge Pulling Demo (`./bin/Optimization`)**
 ![Collision Simulation](image/control.png)
 *Interactive cloth control with edge manipulation and real-time parameter adjustment*
 
